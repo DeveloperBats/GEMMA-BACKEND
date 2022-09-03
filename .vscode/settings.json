@@ -5,5 +5,8 @@
     "javascript.format.enable": true,
     "javascript.format.semicolons": "ignore",
     "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "extensions.ignoreRecommendations": false
+    "extensions.ignoreRecommendations": false,
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
 }

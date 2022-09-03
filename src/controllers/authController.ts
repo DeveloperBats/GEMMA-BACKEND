@@ -1,8 +1,8 @@
 import { Request, Response } from "express"
 
-import { User } from "@interfaces"
-import Console from "@utils/logger"
-import { isEmpty } from "@utils/object"
+import { User } from "../interfaces"
+import Console from "../utils/logger"
+import { isEmpty } from "../utils/object"
 
 const console = new Console("AUTH")
 
