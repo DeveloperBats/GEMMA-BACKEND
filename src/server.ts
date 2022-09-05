@@ -4,20 +4,32 @@ import cors from "cors"
 import router from "./routes/index"
 import Console from "./utils/logger"
 import mysql from "mysql2"
+import "dotenv/config"
+
+const console = new Console("SERVER")
 
 const app = express()
 const PORT = process.env.PORT || 3000
 
 //BD
-const connection = mysql.createConnection({
-    host: "127.0.0.1",
-    user: "root",
-    database: "gemma",
+export const connection = mysql.createConnection({
+    host: process.env.HOST,
+    user: process.env.USER,
+    password: process.env.PASSWORD,
+    database: process.env.DATABASE,
+})
+
+console.debug("connecting to the database GEMMA-BD...")
+
+connection.connect(err => {
+    if (err) {
+        console.error("connected to database", 500)
+        throw err
+    }
 })
 
 //config
 app.set("json spaces", 2)
-const console = new Console("SERVER")
 
 //BD
 console.debug(`${connection}`)
@@ -33,3 +45,5 @@ app.use("/api", router)
 app.listen(PORT, () => {
     console.success(`Server running on port ${PORT}...`, 200)
 })
+
+
