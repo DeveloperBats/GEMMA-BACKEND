@@ -6,27 +6,30 @@ class Console implements ConsoleContructor {
         this.moduleName = moduleName
     }
 
-    success(message: string, code: number) {
+    success(content: any, code: number) {
         console.log(
             `${chalk.bgGreen(
                 `[${this.moduleName}][${code}](${new Date().toLocaleString()})`
-            )}:${message}`
+            )}:`,
+            content
         )
     }
 
-    error(message: string, code: number) {
+    error(content: any, code: number) {
         console.log(
             `${chalk.bgRed(
                 `[${this.moduleName}][${code}](${new Date().toLocaleString()})`
-            )}:${message}`
+            )}:`,
+            content
         )
     }
 
-    debug(message: string) {
+    debug(content: any) {
         console.log(
             `${chalk.bgBlue(
                 `[${this.moduleName}](${new Date().toLocaleString()})`
-            )}:${message}`
+            )}:`,
+            content
         )
     }
 }

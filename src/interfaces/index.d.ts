@@ -1,10 +1,14 @@
-export interface User {
+export interface IUser {
     id: number
     name: string
+    lastname: string
+    nickname: string
+    password: string
     email: string
-    user: string
-    pass: string
+    profileImage: string
+    confirmPassword: string
 }
+export interface IRegisterUser extends Pick<IUser, "user" | "pass"> {}
 
 //Constructor
 

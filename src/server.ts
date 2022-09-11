@@ -23,16 +23,14 @@ console.debug("connecting to the database GEMMA-BD...")
 
 connection.connect(err => {
     if (err) {
-        console.error("connected to database", 500)
+        console.error("cannot connect to the database", 500)
         throw err
     }
+    console.success("connection established successfully!", 200)
 })
 
 //config
 app.set("json spaces", 2)
-
-//BD
-console.debug(`${connection}`)
 
 //middlewares
 app.use(express.json())
@@ -45,5 +43,3 @@ app.use("/api", router)
 app.listen(PORT, () => {
     console.success(`Server running on port ${PORT}...`, 200)
 })
-
-
