@@ -1,3 +1,5 @@
+const jwt = require("jsonwebtoken");
+
 import connection from "../models/connection/connectionGEMMA"
 import { Request, Response } from "express"
 
@@ -6,12 +8,14 @@ import { IUser } from "../interfaces"
 import Console from "../utils/logger"
 import { isEmpty } from "../utils/object"
 import { HASTSALTS } from "../constants/hash"
+import {ERROR_BAD_REQUEST, ERROR_SERVER, LOGIN_ERROR, REPONSE_OK } from "../constants/response"
+import { login_query } from "../querys/auth"
 
 const logger = new Console("AUTH")
 
-export const login = async (_req: Request, _res: Response) => {
+export const login = async (req: Request, res: Response) => {
     const body: Pick<IUser, "user_nickname" | "user_password" | "user_email"> =
-        _req.body || {}
+        req.body || {}
     if (
         isEmpty(body) ||
         typeof body.user_nickname !== "string" ||
@@ -19,9 +23,45 @@ export const login = async (_req: Request, _res: Response) => {
         body.user_nickname.trim() === "" ||
         body.user_password.trim() === ""
     ) {
-        console.error("BAD REQUEST", 400)
-        _res.status(400).json({ status: "BAD_REQUEST" }).end()
+        console.error("BAD REQUEST", ERROR_BAD_REQUEST.CODE)
+        res.status(ERROR_BAD_REQUEST.CODE).json({ status: ERROR_BAD_REQUEST.MESSAGE }).end()
     }
+    connection.execute(
+        login_query(body.user_nickname, body.user_email),
+        (err, results, _fields) => {
+            const result : any[] = results as any 
+            if (err || !result || typeof result!=="object" || !("user_password" in result[0])) {
+                logger.error(
+                    "Error fetching login[auth/login]",
+                    LOGIN_ERROR.CODE
+                )
+                throw err
+            }
+            bcrypt.compare(body.user_password,  result[0].user_password, (err, results) =>{
+                if (err) {
+                    throw err
+                }
+                console.log(results)
+                if (!results) {
+                    res.status(REPONSE_OK.CODE).json({ status: "PASSWORD INCORRECT"}).end()
+                }
+            } )
+            
+            const user = {
+                username: body.user_nickname,
+                password: body.user_password,
+                email: body.user_email
+            }
+            jwt.sign({user}, 'secretkey', (_err:any, token:any) =>{
+                res.json({
+                    token: token
+                })
+            })
+
+        }
+    )
+    res.end()
+
 }
 
 export const register = async (req: Request, res: Response) => {
@@ -33,8 +73,8 @@ export const register = async (req: Request, res: Response) => {
             !body.user_confirm_password ||
             body.user_password !== body.user_confirm_password
         ) {
-            logger.error("BAD_PAYLOAD[auth/register]", 400)
-            res.status(400).json({ status: "BAD_PAYLOAD" }).end()
+            logger.error("BAD_PAYLOAD[auth/register]", ERROR_BAD_REQUEST.CODE)
+            res.status(ERROR_BAD_REQUEST.CODE).json({ status: ERROR_BAD_REQUEST.MESSAGE }).end()
         }
 
         body.user_password = await bcrypt.hash(body.user_password, HASTSALTS)
@@ -63,7 +103,7 @@ export const register = async (req: Request, res: Response) => {
                 if (err) {
                     logger.error(
                         "Error adding the new user[auth/register]",
-                        500
+                        ERROR_SERVER.CODE
                     )
                     throw err
                 }
@@ -100,15 +140,26 @@ export const register = async (req: Request, res: Response) => {
                     if (err) {
                         logger.error(
                             "Error inserting the masrterkeys[auth/register]",
-                            500
+                            ERROR_SERVER.CODE
                         )
                         throw err
                     }
-                    res.status(200).json({ status: "SUCCESFULLY" }).end()
+                    res.status(REPONSE_OK.CODE).json({ status: REPONSE_OK.MESSAGE}).end()
                 })
             }
         )
     } catch (error) {
-        logger.error("SERVER_ERROR[auth/register]", 500)
+        logger.error("SERVER_ERROR[auth/register]", ERROR_SERVER.CODE)
+    }
+}
+
+function verifyToken(req: any, res: any, next:any){
+    const bearerHeader = req.headers['authorization'];
+    if (typeof bearerHeader !== 'undefined') {
+       const bearerToken =  bearerHeader.split(" ")[0]
+       req.token = bearerToken
+       next();
+    }else{
+        res.status(403)
     }
 }
