@@ -1,4 +1,4 @@
-const jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken")
 
 import connection from "../models/connection/connectionGEMMA"
 import { Request, Response } from "express"
@@ -8,7 +8,13 @@ import { IUser } from "../interfaces"
 import Console from "../utils/logger"
 import { isEmpty } from "../utils/object"
 import { HASTSALTS } from "../constants/hash"
-import {ERROR_BAD_REQUEST, ERROR_SERVER, LOGIN_ERROR, REPONSE_OK } from "../constants/response"
+import {
+    ERROR_BAD_REQUEST,
+    ERROR_SERVER,
+    LOGIN_ERROR,
+    RESPONSE_CREATED,
+    RESPONSE_OK,
+} from "../constants/response"
 import { login_query } from "../querys/auth"
 
 const logger = new Console("AUTH")
@@ -24,44 +30,56 @@ export const login = async (req: Request, res: Response) => {
         body.user_password.trim() === ""
     ) {
         console.error("BAD REQUEST", ERROR_BAD_REQUEST.CODE)
-        res.status(ERROR_BAD_REQUEST.CODE).json({ status: ERROR_BAD_REQUEST.MESSAGE }).end()
+        res.status(ERROR_BAD_REQUEST.CODE)
+            .json({ status: ERROR_BAD_REQUEST.MESSAGE })
+            .end()
     }
     connection.execute(
         login_query(body.user_nickname, body.user_email),
         (err, results, _fields) => {
-            const result : any[] = results as any 
-            if (err || !result || typeof result!=="object" || !("user_password" in result[0])) {
+            const result: any[] = results as any
+            if (
+                err ||
+                !result ||
+                typeof result !== "object" ||
+                !("user_password" in result[0])
+            ) {
                 logger.error(
                     "Error fetching login[auth/login]",
                     LOGIN_ERROR.CODE
                 )
                 throw err
             }
-            bcrypt.compare(body.user_password,  result[0].user_password, (err, results) =>{
-                if (err) {
-                    throw err
+            bcrypt.compare(
+                body.user_password,
+                result[0].user_password,
+                (err, results) => {
+                    if (err) {
+                        throw err
+                    }
+                    console.log("Comparetion")
+                    console.log(results)
+                    if (!results) {
+                        res.status(RESPONSE_OK.CODE)
+                            .json({ status: "PASSWORD INCORRECT" })
+                            .end()
+                    }
                 }
-                console.log(results)
-                if (!results) {
-                    res.status(REPONSE_OK.CODE).json({ status: "PASSWORD INCORRECT"}).end()
-                }
-            } )
-            
-            const user = {
-                username: body.user_nickname,
-                password: body.user_password,
-                email: body.user_email
+            )
+            const payload = {
+                cheked: true,
             }
-            jwt.sign({user}, 'secretkey', (_err:any, token:any) =>{
-                res.json({
-                    token: token
-                })
+            const token = jwt.sign(payload, process.env.CODE_PASS, {
+                expiresIn: "30min",
             })
-
+            console.log(token)
+            res.status(RESPONSE_OK.CODE).json({
+                status: RESPONSE_OK.MESSAGE,
+                data: { token: token },
+            })
         }
     )
-    res.end()
-
+    /*     res.end() */
 }
 
 export const register = async (req: Request, res: Response) => {
@@ -74,11 +92,13 @@ export const register = async (req: Request, res: Response) => {
             body.user_password !== body.user_confirm_password
         ) {
             logger.error("BAD_PAYLOAD[auth/register]", ERROR_BAD_REQUEST.CODE)
-            res.status(ERROR_BAD_REQUEST.CODE).json({ status: ERROR_BAD_REQUEST.MESSAGE }).end()
+            res.status(ERROR_BAD_REQUEST.CODE)
+                .json({ status: ERROR_BAD_REQUEST.MESSAGE })
+                .end()
         }
 
         body.user_password = await bcrypt.hash(body.user_password, HASTSALTS)
-        body.profiles_id = 2
+        body.profiles_id = 4
 
         console.log(body)
 
@@ -144,22 +164,13 @@ export const register = async (req: Request, res: Response) => {
                         )
                         throw err
                     }
-                    res.status(REPONSE_OK.CODE).json({ status: REPONSE_OK.MESSAGE}).end()
+                    res.status(RESPONSE_CREATED.CODE)
+                        .json({ status: RESPONSE_CREATED.MESSAGE })
+                        .end()
                 })
             }
         )
     } catch (error) {
         logger.error("SERVER_ERROR[auth/register]", ERROR_SERVER.CODE)
-    }
-}
-
-function verifyToken(req: any, res: any, next:any){
-    const bearerHeader = req.headers['authorization'];
-    if (typeof bearerHeader !== 'undefined') {
-       const bearerToken =  bearerHeader.split(" ")[0]
-       req.token = bearerToken
-       next();
-    }else{
-        res.status(403)
     }
 }
